@@ -5,27 +5,27 @@
 // Pin Definitions
 const int TRIG_PIN = 6;    // Ultrasonic Sensor TRIG pin
 const int ECHO_PIN = 7;    // Ultrasonic Sensor ECHO pin
-const int SERVO_LID_PIN = 9;  // Servo for lid
-const int SERVO_THROW_PIN = 10; // Servo for throwing mechanism (optional)
+const int SERVO_LID_PIN = 9;   // Servo untuk tutup tempat sampah
+const int SERVO_THROW_PIN = 10; // Servo untuk mekanisme membuang sampah
 const int RX_PIN = 2;      // DFPlayer RX pin
 const int TX_PIN = 3;      // DFPlayer TX pin
 
 // Constants
-const int DISTANCE_THRESHOLD = 50;   // Distance in centimeters to trigger lid
-const int TRASH_DETECT_THRESHOLD = 20; // Distance to detect trash being thrown
-const int LID_OPEN_ANGLE = 180;
-const int LID_CLOSE_ANGLE = 0;
+const int DISTANCE_THRESHOLD = 50;   // Jarak dalam centimeter untuk membuka tutup
+const int TRASH_DETECT_THRESHOLD = 20; // Jarak untuk mendeteksi sampah dibuang
+const int SERVO_OPEN_ANGLE = 90;     // Sudut buka servo
+const int SERVO_CLOSE_ANGLE = 0;     // Sudut tutup servo
 
 // Object Declarations
 Servo servoLid;
-Servo servoThrow;  // Optional: for automatic trash throwing mechanism
+Servo servoThrow;
 SoftwareSerial mySerial(RX_PIN, TX_PIN);
 DFPlayerMini_Fast myMP3;
 
 // Variables
 float duration_us, distance_cm;
 unsigned long lastTrashDetectTime = 0;
-const int TRASH_DETECT_DELAY = 3000; // 3 seconds between thank you messages
+const int TRASH_DETECT_DELAY = 3000; // Jeda 3 detik antara ucapan terima kasih
 
 void setup() {
   Serial.begin(9600);
@@ -36,33 +36,37 @@ void setup() {
   
   // Servo Setup
   servoLid.attach(SERVO_LID_PIN);
-  servoLid.write(LID_CLOSE_ANGLE);
+  servoLid.write(SERVO_CLOSE_ANGLE);
   
-  // Optional: Throw Servo Setup
-  // servoThrow.attach(SERVO_THROW_PIN);
+  servoThrow.attach(SERVO_THROW_PIN);
+  servoThrow.write(SERVO_CLOSE_ANGLE);
   
   // DFPlayer Setup
   mySerial.begin(9600);
   if (!myMP3.begin(mySerial)) {
-    Serial.println(F("DFPlayer initialization failed!"));
-    while(true); // Stop further execution
+    Serial.println(F("Inisialisasi DFPlayer gagal!"));
+    while(true); // Hentikan eksekusi lebih lanjut
   }
   
-  myMP3.volume(20); // Set volume (0-30)
+  myMP3.volume(20); // Atur volume (0-30)
 }
 
 void loop() {
-  // Measure distance
+  // Ukur jarak
   distance_cm = measureDistance();
   
-  // Control lid based on proximity
+  // Kontrol servo berdasarkan jarak
   if (distance_cm < DISTANCE_THRESHOLD) {
-    servoLid.write(LID_OPEN_ANGLE);
+    // Buka kedua servo 90 derajat secara bersamaan
+    servoLid.write(SERVO_OPEN_ANGLE);
+    servoThrow.write(SERVO_OPEN_ANGLE);
   } else {
-    servoLid.write(LID_CLOSE_ANGLE);
+    // Tutup kedua servo
+    servoLid.write(SERVO_CLOSE_ANGLE);
+    servoThrow.write(SERVO_CLOSE_ANGLE);
   }
   
-  // Detect trash being thrown
+  // Deteksi sampah dibuang
   if (distance_cm < TRASH_DETECT_THRESHOLD) {
     if (millis() - lastTrashDetectTime > TRASH_DETECT_DELAY) {
       playThankYouMessage();
@@ -74,19 +78,20 @@ void loop() {
 }
 
 float measureDistance() {
-  // Generate 10-microsecond pulse to TRIG pin
+  // Hasilkan pulsa 10-mikrodetik ke pin TRIG
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
   
-  // Measure duration of pulse from ECHO pin
+  // Ukur durasi pulsa dari pin ECHO
   duration_us = pulseIn(ECHO_PIN, HIGH);
   
-  // Calculate the distance
+  // Hitung jarak
   return 0.017 * duration_us;
 }
 
 void playThankYouMessage() {
-  // Assuming you have a file named "thanks.mp3" in the root directory of the SD card
-  myMP3.play(1);  // Play first track
+  // Putar file MP3 pertama dari kartu SD
+  // Pastikan Anda telah mengupload file MP3 ucapan terima kasih ke kartu SD
+  myMP3.play(1);  
 }
